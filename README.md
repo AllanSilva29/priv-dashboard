@@ -39,7 +39,7 @@ Siga os passos abaixo para rodar o projeto localmente:
 
 ## 🖥️ Como Usar a Interface
 
-A interface do projeto é composta por um página principal com um fundo dinâmico e componentes personalizáveis. Abaixo estão as funcionalidades principais:
+O projeto é composto por um página principal com um fundo dinâmico e componentes personalizáveis. Abaixo estão as funcionalidades principais:
 
 ### 1. **Fundo Dinâmico**
    - O fundo da tela é carregado aleatoriamente a partir de uma lista de imagens.
