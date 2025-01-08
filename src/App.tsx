@@ -25,22 +25,15 @@ export default function App() {
   const [items, setItems] = useState(['clock', 'quote']);
   const { 
     currentBackground, 
-    blur, 
-    backgroundSize, 
-    backgroundRotation, 
-    backgroundRepeat, // Get backgroundRepeat from the store
-    setBackgroundSize, 
-    setBackgroundRotation, 
-    setBackgroundRepeat, // Get setBackgroundRepeat from the store
+    setBackgroundConfig,
     randomizeBackground,
     randomizeQuote,
-    setBackgroundScale,
     rotationInterval,
     isRotationPaused
   } = useStore();
   const [isSizeOpen, setSizeOpen] = useState(false);
   const [isRotationOpen, setRotationOpen] = useState(false);
-  const [isDashboardOpen, setIsDashboardOpen] = useState(false); // State for Dashboard visibility
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   
   useEffect(() => {
     randomizeBackground();
@@ -101,6 +94,8 @@ export default function App() {
   const repeatOptions = [
     { label: 'No Repeat', value: 'no-repeat' },
     { label: 'Repeat', value: 'repeat' },
+    { label: 'Repeat X', value: 'repeat-x' },
+    { label: 'Repeat Y', value: 'repeat-y' },
   ];
 
   const renderComponent = (id: string) => {
@@ -117,19 +112,18 @@ export default function App() {
   return (
     <>
       <div 
-        className="fixed inset-0 bg-center bg-no-repeat transition-all duration-1000 ease-in-out"
+        className="fixed inset-0 bg-center transition-all duration-1000 ease-in-out"
         style={{ 
           backgroundImage: `url(${currentBackground.url})`,
-          filter: `blur(${blur}px)`,
-          transform: `scale(${currentBackground.scale}) rotate(${backgroundRotation}deg)`,
-          backgroundSize: backgroundSize,
-          backgroundRepeat: backgroundRepeat, // Use backgroundRepeat from the store
+          filter: `blur(${currentBackground.blur}px)`,
+          transform: `scale(${currentBackground.scale}) rotate(${currentBackground.rotation}deg)`,
+          backgroundSize: currentBackground.size,
+          backgroundRepeat: currentBackground.repeat,
         }}
       />
       <div className="relative min-h-screen flex items-center justify-center">
         <div className="absolute inset-0 bg-black/40" />
         
-        {/* Configuration Button */}
         <button
           onClick={() => setIsDashboardOpen(true)}
           className="fixed top-4 right-4 p-2 rounded-full bg-black/20 hover:bg-black/40 transition-colors text-white"
@@ -140,9 +134,7 @@ export default function App() {
         <Dashboard isOpen={isDashboardOpen} setIsOpen={setIsDashboardOpen} />
         <BackgroundCredit />
 
-        {/* Buttons Container */}
         <div className="fixed top-4 right-16 flex gap-2">
-          {/* Slider */}
           <div className="flex items-center gap-2">
             <div className="relative">
               <input
@@ -151,13 +143,12 @@ export default function App() {
                 max="3"
                 step="0.1"
                 value={currentBackground.scale}
-                onChange={(e) => setBackgroundScale(currentBackground.id, parseFloat(e.target.value))}
+                onChange={(e) => setBackgroundConfig(currentBackground.id, { scale: parseFloat(e.target.value) })}
                 className="slider"
               />
             </div>
           </div>
 
-          {/* Rotation Button */}
           <div className="relative">
             <button
               onClick={() => setRotationOpen(!isRotationOpen)}
@@ -168,7 +159,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* Size Button */}
           <div className="relative">
             <button
               onClick={() => setSizeOpen(!isSizeOpen)}
@@ -179,34 +169,32 @@ export default function App() {
             </button>
           </div>
 
-          {/* Repeat Button */}
           <div className="relative">
             <button
               onClick={() => {
-                const currentIndex = repeatOptions.findIndex(option => option.value === backgroundRepeat);
+                const currentIndex = repeatOptions.findIndex(option => option.value === currentBackground.repeat);
                 const nextIndex = (currentIndex + 1) % repeatOptions.length;
-                setBackgroundRepeat(repeatOptions[nextIndex].value); // Update backgroundRepeat in the store
+                setBackgroundConfig(currentBackground.id, { repeat: repeatOptions[nextIndex].value });
               }}
               className="p-2 rounded-full bg-black/20 hover:bg-black/40 transition-colors text-white"
-              title={`Background Repeat: ${repeatOptions.find(option => option.value === backgroundRepeat)?.label}`}
+              title={`Background Repeat: ${repeatOptions.find(option => option.value === currentBackground.repeat)?.label}`}
             >
               <Repeat className="w-6 h-6" />
             </button>
           </div>
         </div>
 
-        {/* Rotation Dropdown */}
         {isRotationOpen && (
           <div className="fixed top-16 right-4 w-32 bg-white rounded-lg shadow-lg py-1 z-50">
             {rotationOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => {
-                  setBackgroundRotation(option.value);
+                  setBackgroundConfig(currentBackground.id, { rotation: option.value });
                   setRotationOpen(false);
                 }}
                 className={`w-full px-4 py-2 text-left hover:bg-gray-100 ${
-                  backgroundRotation === option.value ? 'bg-gray-100' : ''
+                  currentBackground.rotation === option.value ? 'bg-gray-100' : ''
                 }`}
               >
                 {option.label}
@@ -215,18 +203,17 @@ export default function App() {
           </div>
         )}
         
-        {/* Size Dropdown */}
         {isSizeOpen && (
           <div className="fixed top-16 right-4 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
             {sizeOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => {
-                  setBackgroundSize(option.value);
+                  setBackgroundConfig(currentBackground.id, { size: option.value });
                   setSizeOpen(false);
                 }}
                 className={`w-full px-4 py-2 text-left hover:bg-gray-100 ${
-                  backgroundSize === option.value ? 'bg-gray-100' : ''
+                  currentBackground.size === option.value ? 'bg-gray-100' : ''
                 }`}
               >
                 {option.label}
@@ -235,7 +222,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Main Content */}
         <div className="relative w-full max-w-4xl mx-auto p-8 space-y-8">
           <DndContext
             sensors={sensors}

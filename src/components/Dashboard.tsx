@@ -9,7 +9,6 @@ export function Dashboard({ isOpen, setIsOpen }: DashboardProps) {
     backgroundsText: '',
     timeColor: '',
     quoteColor: '',
-    blur: 0,
     rotationInterval: 30,
     isRotationPaused: false
   });
@@ -21,7 +20,6 @@ export function Dashboard({ isOpen, setIsOpen }: DashboardProps) {
         backgroundsText: store.backgrounds.map(b => `${b.url}\n${b.name}`).join('\n\n'),
         timeColor: store.timeColor,
         quoteColor: store.quoteColor,
-        blur: store.blur,
         rotationInterval: store.rotationInterval,
         isRotationPaused: store.isRotationPaused
       });
@@ -31,12 +29,15 @@ export function Dashboard({ isOpen, setIsOpen }: DashboardProps) {
   const handleSave = () => {
     store.setTimeColor(localState.timeColor);
     store.setQuoteColor(localState.quoteColor);
-    store.setBlur(localState.blur);
     store.setQuotes(localState.quotesText);
     store.setBackgrounds(localState.backgroundsText);
     store.setRotationInterval(localState.rotationInterval);
     store.setRotationPaused(localState.isRotationPaused);
     setIsOpen(false);
+  };
+
+  const handleBlurChange = (blur: number) => {
+    store.setBackgroundConfig(store.currentBackground.id, { blur });
   };
 
   return (
@@ -127,13 +128,13 @@ export function Dashboard({ isOpen, setIsOpen }: DashboardProps) {
               </div>
 
               <div className="space-y-2">
-                <label className="block font-medium">Background Blur ({localState.blur}px)</label>
+                <label className="block font-medium">Background Blur ({store.currentBackground.blur}px)</label>
                 <input
                   type="range"
                   min="0"
                   max="20"
-                  value={localState.blur}
-                  onChange={(e) => setLocalState(prev => ({ ...prev, blur: Number(e.target.value) }))}
+                  value={store.currentBackground.blur}
+                  onChange={(e) => handleBlurChange(Number(e.target.value))}
                   className="w-full accent-blue-600"
                 />
               </div>

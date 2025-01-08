@@ -8,16 +8,17 @@ export interface Background {
   url: string;
   name: string;
   scale: number;
+  rotation: number;
+  size: string;
+  repeat: string;
+  blur: number;
 }
 
 export interface Settings {
   timeColor: string;
   quoteColor: string;
-  blur: number;
   quotes: Quote[];
   backgrounds: Background[];
-  backgroundSize: string;
-  backgroundRotation: number;
   rotationInterval: number;
   isRotationPaused: boolean;
 }
