@@ -12,6 +12,11 @@
   }
 }
 
+/* Hide the scrollbar */
+::-webkit-scrollbar {
+  display: none;
+}
+
 /* Smooth transitions for draggable items */
 .cursor-move {
   transition: transform 200ms ease;
