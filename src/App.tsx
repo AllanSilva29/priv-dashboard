@@ -20,6 +20,7 @@ import { BackgroundCredit } from './components/BackgroundCredit';
 import { DraggableItem } from './components/DraggableItem';
 import { useStore } from './store';
 import { LayoutTemplate, RotateCw, Repeat, Settings } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 export default function App() {
   const [items, setItems] = useState(['clock', 'quote']);
@@ -109,8 +110,16 @@ export default function App() {
     }
   };
 
+  const scrollToNotes = () => {
+    window.scrollTo({
+      top: window.innerHeight,
+      behavior: 'smooth'
+    });
+  };
+
   return (
     <>
+    <div className="min-h-[200vh]"> {/* Increase page height for scrolling */}
       <div 
         className="fixed inset-0 bg-center transition-all duration-1000 ease-in-out"
         style={{ 
@@ -121,8 +130,9 @@ export default function App() {
           backgroundRepeat: currentBackground.repeat,
         }}
       />
-      <div className="relative min-h-screen flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/40" />
+       {/* First page content */}
+       <div className="relative min-h-screen flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" />
         
         <button
           onClick={() => setIsDashboardOpen(true)}
@@ -222,20 +232,51 @@ export default function App() {
           </div>
         )}
 
-        <div className="relative w-full max-w-4xl mx-auto p-8 space-y-8">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
+         {/* Main content with clock and quote */}
+         <div className="relative w-full max-w-4xl mx-auto p-8 space-y-8">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={items} strategy={verticalListSortingStrategy}>
+                {items.map((id) => (
+                  <DraggableItem key={id} id={id}>
+                    {renderComponent(id)}
+                  </DraggableItem>
+                ))}
+              </SortableContext>
+            </DndContext>
+          </div>
+
+          {/* Scroll arrow */}
+          <button 
+            onClick={scrollToNotes}
+            className="absolute bottom-8 -translate-x-1/2 text-white/80 hover:text-white transition-all duration-300 animate-bounce"
+            aria-label="Scroll to notes"
           >
-            <SortableContext items={items} strategy={verticalListSortingStrategy}>
-              {items.map((id) => (
-                <DraggableItem key={id} id={id}>
-                  {renderComponent(id)}
-                </DraggableItem>
-              ))}
-            </SortableContext>
-          </DndContext>
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-sm font-light tracking-widest uppercase">Notes</span>
+              <ChevronDown className="w-8 h-8" />
+            </div>
+          </button>
+        </div>
+
+        {/* Notes section */}
+        <div className="relative min-h-screen flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="relative w-full max-w-4xl mx-auto p-8">
+            <div className="text-white/90">
+              <h2 className="text-3xl font-light mb-8 tracking-wide">Your Notes</h2>
+              <div className="grid gap-4">
+                {/* Placeholder for notes - will be implemented in next phase */}
+                <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg border border-white/20 hover:bg-white/15 transition-colors cursor-pointer">
+                  <p className="text-lg mb-2">Click to add your first note...</p>
+                  <p className="text-sm text-white/60">Your thoughts will appear here</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
