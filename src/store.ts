@@ -94,8 +94,8 @@ export const useStore = create<Store>()(
         set({ quotes });
       },
       
-      setBackgrounds: (backgroundsText) => {
-        const backgrounds = backgroundsText.split('\n\n').map(block => {
+      setBackgrounds: (backgroundsText) => set((state) => {
+        const newBackgrounds = backgroundsText.split('\n\n').map(block => {
           const [url, name] = block.split('\n');
           return { 
             id: crypto.randomUUID(),
@@ -108,8 +108,15 @@ export const useStore = create<Store>()(
             blur: 0
           };
         }).filter(b => b.url && b.name);
-        set({ backgrounds });
-      },
+
+        // Preserve configurations of existing backgrounds
+        const updatedBackgrounds = newBackgrounds.map(newBg => {
+          const existingBg = state.backgrounds.find(bg => bg.url === newBg.url && bg.name === newBg.name);
+          return existingBg ? { ...newBg, ...existingBg } : newBg;
+        });
+
+        return { backgrounds: updatedBackgrounds };
+      }),
       
       randomizeBackground: () => set((state) => ({
         currentBackground: state.backgrounds[Math.floor(Math.random() * state.backgrounds.length)]
