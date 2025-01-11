@@ -47,7 +47,7 @@ O projeto é composto por um página principal com um fundo dinâmico e componen
    - O fundo pode ser **rotacionado** em 0°, 90°, 180° ou 270°.
    - O **tamanho do fundo** pode ser ajustado para opções como `Cover`, `Contain`, `Stretch to Fit`, entre outras.
    - O **repetição do fundo** pode ser configurada para `No-Repeat` ou `Repeat`.
-   - A repetição também pode ser pausada ou retomada a qualquer momento.
+   - A rotação automática também pode ser pausada ou retomada a qualquer momento.
 
 ### 2. **Efeitos Visuais**
    - **Desfoque (Blur)**: Ajuste o desfoque do fundo para criar um efeito visual suave.
