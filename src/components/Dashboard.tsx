@@ -1,195 +1,206 @@
-import React from 'react';
-import { X, SkipForward, Save, Pause, Play, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
+import { loadPresets, savePreset } from '../utils/config';
+import { 
+  createInitialState, 
+  createSettingsFromState, 
+  DashboardState 
+} from '../utils/dashboard';
+import { ConfigPreset } from '../types';
+import { PresetList } from './Dashboard/PresetList';
+import { ColorPicker } from './Dashboard/ColorPicker';
+import { SliderControl } from './Dashboard/SliderControl';
+import { TextAreaControl } from './Dashboard/TextAreaControl';
+import { Modal } from './Dashboard/Modal';
+import { Controls } from './Dashboard/Controls';
+import { Header } from './Dashboard/Header';
+import { AutoRotation } from './Dashboard/AutoRotation';
+
+interface DashboardProps {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+}
 
 export function Dashboard({ isOpen, setIsOpen }: DashboardProps) {
   const store = useStore();
-  const [localState, setLocalState] = React.useState({
-    quotesText: '',
-    backgroundsText: '',
-    timeColor: '',
-    quoteColor: '',
-    rotationInterval: 30,
-    isRotationPaused: false
-  });
+  const [presets, setPresets] = useState<ConfigPreset[]>([]);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [newPresetName, setNewPresetName] = useState('');
+  const [localState, setLocalState] = useState<DashboardState>(() => 
+    createInitialState(store)
+  );
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
-      setLocalState({
-        quotesText: store.quotes.map(q => `${q.text}\n${q.author}`).join('\n\n'),
-        backgroundsText: store.backgrounds.map(b => `${b.url}\n${b.name}`).join('\n\n'),
-        timeColor: store.timeColor,
-        quoteColor: store.quoteColor,
-        rotationInterval: store.rotationInterval,
-        isRotationPaused: store.isRotationPaused
-      });
+      loadPresets().then(setPresets);
+      setLocalState(createInitialState(store));
     }
   }, [isOpen, store]);
 
   const handleSave = () => {
-    store.setTimeColor(localState.timeColor);
-    store.setQuoteColor(localState.quoteColor);
-    store.setQuotes(localState.quotesText);
-    store.setBackgrounds(localState.backgroundsText);
-    store.setRotationInterval(localState.rotationInterval);
-    store.setRotationPaused(localState.isRotationPaused);
+    const settings = createSettingsFromState(localState);
+    Object.entries(settings).forEach(([key, value]) => {
+      const setter = `set${key.charAt(0).toUpperCase() + key.slice(1)}` as keyof typeof store;
+      if (typeof store[setter] === 'function') {
+        (store[setter] as Function)(value);
+      }
+    });
     setIsOpen(false);
+  };
+
+  const handleExportConfig = () => {
+    if (!store.isModified) return;
+    setShowExportDialog(true);
+  };
+
+  const handleSavePreset = () => {
+    if (!newPresetName.trim()) return;
+    const settings = createSettingsFromState(localState);
+    savePreset(newPresetName, settings);
+    store.resetModifiedState();
+    setShowExportDialog(false);
+    setNewPresetName('');
+  };
+
+  const handleLoadPreset = (preset: ConfigPreset) => {
+    store.loadPreset(preset);
+    alert(`Configuration "${preset.name}" loaded successfully!`);
   };
 
   const handleBlurChange = (blur: number) => {
     store.setBackgroundConfig(store.currentBackground.id, { blur });
   };
 
+  if (!isOpen) return null;
+
   return (
     <>
-      <div className="fixed top-4 left-4 flex gap-2">
-        <button
-          onClick={() => {
-            store.randomizeBackground();
-            store.randomizeQuote();
-          }}
-          className="p-2 rounded-full bg-black/20 hover:bg-black/40 transition-colors text-white"
-          title="Change Background & Quote"
-        >
-          <SkipForward className="w-6 h-6" />
-        </button>
-        
-        <button
-          onClick={() => store.setRotationPaused(!store.isRotationPaused)}
-          className="p-2 rounded-full bg-black/20 hover:bg-black/40 transition-colors text-white"
-          title={store.isRotationPaused ? "Resume Rotation" : "Pause Rotation"}
-        >
-          {store.isRotationPaused ? (
-            <Play className="w-6 h-6" />
-          ) : (
-            <Pause className="w-6 h-6" />
-          )}
-        </button>
-      </div>
+      <Controls
+        isRotationPaused={store.isRotationPaused}
+        onRandomize={() => {
+          store.randomizeBackground();
+          store.randomizeQuote();
+        }}
+        onToggleRotation={() => store.setRotationPaused(!store.isRotationPaused)}
+      />
+      
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <Header
+            isModified={store.isModified}
+            onSave={handleSave}
+            onExport={handleExportConfig}
+            onClose={() => setIsOpen(false)}
+          />
 
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Dashboard Settings</h2>
-              <div className="flex gap-2">
-                <button 
-                  onClick={handleSave}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  Save Changes
-                </button>
-                <button onClick={() => setIsOpen(false)} className="hover:bg-gray-100 p-2 rounded-full">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              <div className="space-y-2">
-                <label className="block font-medium">Time Color</label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="color"
-                    value={localState.timeColor}
-                    onChange={(e) => setLocalState(prev => ({ ...prev, timeColor: e.target.value }))}
-                    className="w-16 h-10 cursor-pointer rounded-lg"
-                  />
-                  <span className="text-sm text-gray-600">{localState.timeColor}</span>
-                  <button
-                    onClick={() => setLocalState(prev => ({ ...prev, timeColor: '#ffffff' }))}
-                    className="p-2 hover:bg-gray-100 rounded-full"
-                    title="Reset to default"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+          <div className="p-6 space-y-6">
+            <PresetList
+              presets={presets}
+              currentPresetId={store.currentPresetId}
+              onLoadPreset={handleLoadPreset}
+              onEditPreset={() => {}}
+            />
 
-              <div className="space-y-2">
-                <label className="block font-medium">Quote Color</label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="color"
-                    value={localState.quoteColor}
-                    onChange={(e) => setLocalState(prev => ({ ...prev, quoteColor: e.target.value }))}
-                    className="w-16 h-10 cursor-pointer rounded-lg"
-                  />
-                  <span className="text-sm text-gray-600">{localState.quoteColor}</span>
-                  <button
-                    onClick={() => setLocalState(prev => ({ ...prev, quoteColor: '#ffffff' }))}
-                    className="p-2 hover:bg-gray-100 rounded-full"
-                    title="Reset to default"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </button>
-                </div>
+            {store.isModified && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-yellow-800">
+                  Current configuration has been modified from the original preset.
+                </p>
               </div>
+            )}
 
-              <div className="space-y-2">
-                <label className="block font-medium">Background Blur ({store.currentBackground.blur}px)</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="20"
-                  value={store.currentBackground.blur}
-                  onChange={(e) => handleBlurChange(Number(e.target.value))}
-                  className="w-full accent-blue-600"
-                />
-              </div>
+            <ColorPicker
+              label="Time Color"
+              value={localState.timeColor}
+              onChange={(color) => setLocalState(prev => ({ ...prev, timeColor: color }))}
+              onReset={() => setLocalState(prev => ({ ...prev, timeColor: '#ffffff' }))}
+            />
 
-              <div className="space-y-2">
-                <label className="block font-medium">Rotation Interval ({localState.rotationInterval} seconds)</label>
-                <input
-                  type="range"
-                  min="5"
-                  max="300"
-                  step="5"
-                  value={localState.rotationInterval}
-                  onChange={(e) => setLocalState(prev => ({ ...prev, rotationInterval: Number(e.target.value) }))}
-                  className="w-full accent-blue-600"
-                />
-              </div>
+            <ColorPicker
+              label="Quote Color"
+              value={localState.quoteColor}
+              onChange={(color) => setLocalState(prev => ({ ...prev, quoteColor: color }))}
+              onReset={() => setLocalState(prev => ({ ...prev, quoteColor: '#ffffff' }))}
+            />
 
-              <div className="space-y-2">
-                <label className="block font-medium">Auto Rotation</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={!localState.isRotationPaused}
-                    onChange={(e) => setLocalState(prev => ({ ...prev, isRotationPaused: !e.target.checked }))}
-                    className="w-4 h-4 accent-blue-600"
-                  />
-                  <span>Enable automatic background & quote rotation</span>
-                </div>
-              </div>
+            <SliderControl
+              label="Background Blur"
+              value={store.currentBackground.blur}
+              min={0}
+              max={20}
+              unit="px"
+              onChange={handleBlurChange}
+            />
 
-              <div className="space-y-2">
-                <label className="block font-medium">Quotes</label>
-                <p className="text-sm text-gray-600 mb-2">One quote per block, text and author on separate lines</p>
-                <textarea
-                  value={localState.quotesText}
-                  onChange={(e) => setLocalState(prev => ({ ...prev, quotesText: e.target.value }))}
-                  className="w-full h-40 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Quote text&#10;Author&#10;&#10;Another quote text&#10;Another author"
-                />
-              </div>
+            <SliderControl
+              label="Rotation Interval"
+              value={localState.rotationInterval}
+              min={5}
+              max={300}
+              step={5}
+              unit=" seconds"
+              onChange={(value) => setLocalState(prev => ({ ...prev, rotationInterval: value }))}
+            />
 
-              <div className="space-y-2">
-                <label className="block font-medium">Backgrounds</label>
-                <p className="text-sm text-gray-600 mb-2">One per block, URL and name on separate lines</p>
-                <textarea
-                  value={localState.backgroundsText}
-                  onChange={(e) => setLocalState(prev => ({ ...prev, backgroundsText: e.target.value }))}
-                  className="w-full h-40 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="https://example.com/image.jpg&#10;Image Name&#10;&#10;https://example.com/another.jpg&#10;Another Name"
-                />
-              </div>
-            </div>
+            <AutoRotation
+              enabled={!localState.isRotationPaused}
+              onChange={(enabled) => setLocalState(prev => ({ 
+                ...prev, 
+                isRotationPaused: !enabled 
+              }))}
+            />
+
+            <TextAreaControl
+              label="Quotes"
+              description="One quote per block, text and author on separate lines"
+              value={localState.quotesText}
+              onChange={(value) => setLocalState(prev => ({ ...prev, quotesText: value }))}
+              placeholder="Quote text&#10;Author&#10;&#10;Another quote text&#10;Another author"
+            />
+
+            <TextAreaControl
+              label="Backgrounds"
+              description="One per block, URL and name on separate lines"
+              value={localState.backgroundsText}
+              onChange={(value) => setLocalState(prev => ({ ...prev, backgroundsText: value }))}
+              placeholder="https://example.com/image.jpg&#10;Image Name&#10;&#10;https://example.com/another.jpg&#10;Another Name"
+            />
           </div>
         </div>
-      )}
+      </div>
+
+      <Modal
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        title="Export Configuration"
+        actions={
+          <>
+            <button
+              onClick={() => setShowExportDialog(false)}
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSavePreset}
+              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+            >
+              Export
+            </button>
+          </>
+        }
+      >
+        <p className="text-gray-600 mb-4">
+          Enter a name for your configuration preset.
+        </p>
+        <input
+          type="text"
+          value={newPresetName}
+          onChange={(e) => setNewPresetName(e.target.value)}
+          placeholder="Enter preset name"
+          className="w-full px-4 py-2 border rounded-lg"
+        />
+      </Modal>
     </>
   );
 }

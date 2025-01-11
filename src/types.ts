@@ -22,3 +22,16 @@ export interface Settings {
   rotationInterval: number;
   isRotationPaused: boolean;
 }
+
+export interface ConfigPreset {
+  id: string;
+  name: string;
+  settings: Settings;
+  lastModified: string;
+}
+
+export interface ConfigState extends Settings {
+  currentBackground: Background;
+  isModified: boolean;
+  currentPresetId: string | null;
+}
