@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ConfigState, Settings, Background, ConfigPreset } from './types';
-import { loadPresets } from './utils/config';
+import { loadPresets, saveUserPreset, updateUserPreset } from './utils/config';
 
 const defaultSettings: Settings = {
   timeColor: '#ffffff',
@@ -61,6 +61,7 @@ interface Store extends ConfigState {
   markAsModified: () => void;
   resetModifiedState: () => void;
   initializeFromPreset: () => Promise<void>;
+  saveCurrentState: () => void;
 }
 
 export const useStore = create<Store>()(
@@ -83,7 +84,14 @@ export const useStore = create<Store>()(
                 ? defaultPreset.settings.quotes 
                 : defaultSettings.quotes,
               backgrounds: defaultPreset.settings.backgrounds?.length > 0 
-                ? defaultPreset.settings.backgrounds 
+                ? defaultPreset.settings.backgrounds.map(bg => ({
+                    ...bg,
+                    scale: bg.scale ?? 1.1,
+                    rotation: bg.rotation ?? 0,
+                    size: bg.size ?? 'cover',
+                    repeat: bg.repeat ?? 'no-repeat',
+                    blur: bg.blur ?? 0
+                  }))
                 : defaultSettings.backgrounds,
             };
             
@@ -105,100 +113,160 @@ export const useStore = create<Store>()(
         }
       },
 
-      setTimeColor: (color) => set({ timeColor: color, isModified: true }),
-      setQuoteColor: (color) => set({ quoteColor: color, isModified: true }),
+      setTimeColor: (color) => {
+        set(state => {
+          const newState = { ...state, timeColor: color, isModified: true };
+          if (state.currentPresetId) {
+            updateUserPreset(state.currentPresetId, state.name || 'Untitled', newState);
+          }
+          return newState;
+        });
+      },
+
+      setQuoteColor: (color) => {
+        set(state => {
+          const newState = { ...state, quoteColor: color, isModified: true };
+          if (state.currentPresetId) {
+            updateUserPreset(state.currentPresetId, state.name || 'Untitled', newState);
+          }
+          return newState;
+        });
+      },
       
-      setBackgroundConfig: (id, config) => set((state) => {
-        const updatedBackgrounds = state.backgrounds.map(bg => 
-          bg.id === id ? { ...bg, ...config } : bg
-        );
-        
-        return {
-          backgrounds: updatedBackgrounds,
-          currentBackground: state.currentBackground.id === id 
-            ? { ...state.currentBackground, ...config }
-            : state.currentBackground,
-          isModified: true
-        };
-      }),
+      setBackgroundConfig: (id, config) => {
+        set(state => {
+          const updatedBackgrounds = state.backgrounds.map(bg => 
+            bg.id === id ? { ...bg, ...config } : bg
+          );
+          
+          const newState = {
+            backgrounds: updatedBackgrounds,
+            currentBackground: state.currentBackground.id === id 
+              ? { ...state.currentBackground, ...config }
+              : state.currentBackground,
+            isModified: true
+          };
 
-      setRotationInterval: (interval) => set({ rotationInterval: interval, isModified: true }),
-      setRotationPaused: (paused) => set({ isRotationPaused: paused, isModified: true }),
+          if (state.currentPresetId) {
+            updateUserPreset(state.currentPresetId, state.name || 'Untitled', {
+              ...state,
+              ...newState
+            });
+          }
+
+          return newState;
+        });
+      },
+
+      setRotationInterval: (interval) => {
+        set(state => {
+          const newState = { ...state, rotationInterval: interval, isModified: true };
+          if (state.currentPresetId) {
+            updateUserPreset(state.currentPresetId, state.name || 'Untitled', newState);
+          }
+          return newState;
+        });
+      },
+
+      setRotationPaused: (paused) => {
+        set(state => {
+          const newState = { ...state, isRotationPaused: paused, isModified: true };
+          if (state.currentPresetId) {
+            updateUserPreset(state.currentPresetId, state.name || 'Untitled', newState);
+          }
+          return newState;
+        });
+      },
       
-      setQuotes: (quotesText) => set((state) => {
-        if (typeof quotesText !== 'string') {
-          return state;
-        }
-
-        try {
-          const quotes = quotesText
-            .split('\n\n')
-            .map(block => {
-              const lines = block.split('\n');
-              if (lines.length < 2) return null;
-              return {
-                text: lines[0].trim(),
-                author: lines[1].trim()
-              };
-            })
-            .filter((q): q is NonNullable<typeof q> => 
-              q !== null && Boolean(q.text) && Boolean(q.author)
-            );
-
-          return quotes.length > 0 
-            ? { quotes, isModified: true }
-            : state;
-        } catch (error) {
-          return state;
-        }
-      }),
-      
-      setBackgrounds: (backgroundsText) => set((state) => {
-        if (typeof backgroundsText !== 'string') {
-          return state;
-        }
-
-        try {
-          const newBackgrounds = backgroundsText
-            .split('\n\n')
-            .map(block => {
-              const lines = block.split('\n');
-              if (lines.length < 2) return null;
-              return { 
-                id: crypto.randomUUID(),
-                url: lines[0].trim(),
-                name: lines[1].trim(),
-                scale: 1.1,
-                rotation: 0,
-                size: 'cover',
-                repeat: 'no-repeat',
-                blur: 0
-              };
-            })
-            .filter((b): b is NonNullable<typeof b> => 
-              b !== null && Boolean(b.url) && Boolean(b.name)
-            );
-
-          if (newBackgrounds.length === 0) {
+      setQuotes: (quotesText) => {
+        set(state => {
+          if (typeof quotesText !== 'string') {
             return state;
           }
 
-          const updatedBackgrounds = newBackgrounds.map(newBg => {
-            const existingBg = state.backgrounds.find(bg => 
-              bg.url === newBg.url && bg.name === newBg.name
-            );
-            return existingBg ? { ...newBg, ...existingBg } : newBg;
-          });
+          try {
+            const quotes = quotesText
+              .split('\n\n')
+              .map(block => {
+                const lines = block.split('\n');
+                if (lines.length < 2) return null;
+                return {
+                  text: lines[0].trim(),
+                  author: lines[1].trim()
+                };
+              })
+              .filter((q): q is NonNullable<typeof q> => 
+                q !== null && Boolean(q.text) && Boolean(q.author)
+              );
 
-          return { 
-            backgrounds: updatedBackgrounds, 
-            currentBackground: updatedBackgrounds[0],
-            isModified: true 
-          };
-        } catch (error) {
-          return state;
-        }
-      }),
+            if (quotes.length === 0) return state;
+
+            const newState = { ...state, quotes, isModified: true };
+            if (state.currentPresetId) {
+              updateUserPreset(state.currentPresetId, state.name || 'Untitled', newState);
+            }
+            return newState;
+          } catch (error) {
+            return state;
+          }
+        });
+      },
+      
+      setBackgrounds: (backgroundsText) => {
+        set(state => {
+          if (typeof backgroundsText !== 'string') {
+            return state;
+          }
+
+          try {
+            const newBackgrounds = backgroundsText
+              .split('\n\n')
+              .map(block => {
+                const lines = block.split('\n');
+                if (lines.length < 2) return null;
+                return { 
+                  id: crypto.randomUUID(),
+                  url: lines[0].trim(),
+                  name: lines[1].trim(),
+                  scale: 1.1,
+                  rotation: 0,
+                  size: 'cover',
+                  repeat: 'no-repeat',
+                  blur: 0
+                };
+              })
+              .filter((b): b is NonNullable<typeof b> => 
+                b !== null && Boolean(b.url) && Boolean(b.name)
+              );
+
+            if (newBackgrounds.length === 0) {
+              return state;
+            }
+
+            const updatedBackgrounds = newBackgrounds.map(newBg => {
+              const existingBg = state.backgrounds.find(bg => 
+                bg.url === newBg.url && bg.name === newBg.name
+              );
+              return existingBg ? { ...newBg, ...existingBg } : newBg;
+            });
+
+            const newState = { 
+              ...state,
+              backgrounds: updatedBackgrounds, 
+              currentBackground: updatedBackgrounds[0],
+              isModified: true 
+            };
+
+            if (state.currentPresetId) {
+              updateUserPreset(state.currentPresetId, state.name || 'Untitled', newState);
+            }
+
+            return newState;
+          } catch (error) {
+            return state;
+          }
+        });
+      },
       
       randomizeBackground: () => set((state) => {
         if (state.backgrounds.length === 0) return state;
@@ -224,7 +292,14 @@ export const useStore = create<Store>()(
             ? preset.settings.quotes 
             : defaultSettings.quotes,
           backgrounds: preset.settings.backgrounds?.length > 0 
-            ? preset.settings.backgrounds 
+            ? preset.settings.backgrounds.map(bg => ({
+                ...bg,
+                scale: bg.scale ?? 1.1,
+                rotation: bg.rotation ?? 0,
+                size: bg.size ?? 'cover',
+                repeat: bg.repeat ?? 'no-repeat',
+                blur: bg.blur ?? 0
+              }))
             : defaultSettings.backgrounds,
         };
 
@@ -236,8 +311,22 @@ export const useStore = create<Store>()(
         });
       },
 
-      markAsModified: () => set({ isModified: true }),
-      resetModifiedState: () => set({ isModified: false })
+      markAsModified: () => set(state => {
+        const newState = { ...state, isModified: true };
+        if (state.currentPresetId) {
+          updateUserPreset(state.currentPresetId, state.name || 'Untitled', newState);
+        }
+        return newState;
+      }),
+
+      resetModifiedState: () => set({ isModified: false }),
+
+      saveCurrentState: () => {
+        const state = get();
+        if (state.currentPresetId) {
+          updateUserPreset(state.currentPresetId, state.name || 'Untitled', state);
+        }
+      }
     }),
     {
       name: 'dashboard-storage'

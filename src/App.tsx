@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { arrayMove } from '@dnd-kit/sortable';
 import { Background } from './components/Background';
 import { Layout } from './components/Layout';
 import { Notes } from './components/Notes';
@@ -42,9 +43,16 @@ export default function App() {
   const [items, setItems] = useState(['clock', 'quote']);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { randomizeBackground, randomizeQuote, isRotationPaused, setRotationPaused } = useStore();
+  const { 
+    randomizeBackground, 
+    randomizeQuote, 
+    isRotationPaused, 
+    setRotationPaused,
+    rotationInterval 
+  } = useStore();
 
-  React.useEffect(() => {
+  // Initialize the app
+  useEffect(() => {
     const init = async () => {
       await useStore.getState().initializeFromPreset();
       randomizeBackground();
@@ -52,6 +60,18 @@ export default function App() {
     };
     init();
   }, [randomizeBackground]);
+
+  // Handle auto-rotation
+  useEffect(() => {
+    if (isRotationPaused) return;
+
+    const intervalId = setInterval(() => {
+      randomizeBackground();
+      randomizeQuote();
+    }, rotationInterval * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isRotationPaused, rotationInterval, randomizeBackground, randomizeQuote]);
 
   const handleDragEnd = (event: any) => {
     const { active, over } = event;

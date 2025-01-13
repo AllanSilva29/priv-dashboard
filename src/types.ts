@@ -1,3 +1,5 @@
+import { Settings } from './types';
+
 export interface Quote {
   text: string;
   author: string;
@@ -28,6 +30,7 @@ export interface ConfigPreset {
   name: string;
   settings: Settings;
   lastModified: string;
+  type: 'user' | 'premade';
 }
 
 export interface ConfigState extends Settings {

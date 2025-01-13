@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
-import { loadPresets, savePreset } from '../utils/config';
+import { loadPresets, saveUserPreset, updateUserPreset, exportPreset, deleteUserPreset } from '../utils/config';
 import { 
   createInitialState, 
   createSettingsFromState, 
@@ -24,8 +24,10 @@ interface DashboardProps {
 export function Dashboard({ isOpen, setIsOpen }: DashboardProps) {
   const store = useStore();
   const [presets, setPresets] = useState<ConfigPreset[]>([]);
-  const [showExportDialog, setShowExportDialog] = useState(false);
-  const [newPresetName, setNewPresetName] = useState('');
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [presetName, setPresetName] = useState('');
+  const [editingPreset, setEditingPreset] = useState<ConfigPreset | null>(null);
   const [localState, setLocalState] = useState<DashboardState>(() => 
     createInitialState(store)
   );
@@ -48,23 +50,56 @@ export function Dashboard({ isOpen, setIsOpen }: DashboardProps) {
     setIsOpen(false);
   };
 
-  const handleExportConfig = () => {
-    if (!store.isModified) return;
-    setShowExportDialog(true);
+  const handleSavePreset = () => {
+    if (!presetName.trim()) return;
+    
+    const settings = createSettingsFromState(localState);
+    const newPreset = saveUserPreset(presetName, settings);
+    
+    setPresets(prev => [newPreset, ...prev]);
+    store.resetModifiedState();
+    setShowSaveDialog(false);
+    setPresetName('');
   };
 
-  const handleSavePreset = () => {
-    if (!newPresetName.trim()) return;
+  const handleEditPreset = (preset: ConfigPreset) => {
+    setEditingPreset(preset);
+    setPresetName(preset.name);
+    setShowEditDialog(true);
+  };
+
+  const handleUpdatePreset = () => {
+    if (!editingPreset || !presetName.trim()) return;
+
     const settings = createSettingsFromState(localState);
-    savePreset(newPresetName, settings);
+    updateUserPreset(editingPreset.id, presetName, settings);
+    
+    loadPresets().then(setPresets);
     store.resetModifiedState();
-    setShowExportDialog(false);
-    setNewPresetName('');
+    setShowEditDialog(false);
+    setEditingPreset(null);
+    setPresetName('');
   };
 
   const handleLoadPreset = (preset: ConfigPreset) => {
     store.loadPreset(preset);
+    setLocalState(createInitialState(store));
     alert(`Configuration "${preset.name}" loaded successfully!`);
+  };
+
+  const handleDeletePreset = (preset: ConfigPreset) => {
+    if (window.confirm(`Are you sure you want to delete the preset "${preset.name}"?`)) {
+      deleteUserPreset(preset.id);
+      loadPresets().then(setPresets);
+      if (preset.id === store.currentPresetId) {
+        // If the current preset is deleted, load the first available preset
+        loadPresets().then(updatedPresets => {
+          if (updatedPresets.length > 0) {
+            store.loadPreset(updatedPresets[0]);
+          }
+        });
+      }
+    }
   };
 
   const handleBlurChange = (blur: number) => {
@@ -87,9 +122,8 @@ export function Dashboard({ isOpen, setIsOpen }: DashboardProps) {
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <Header
-            isModified={store.isModified}
             onSave={handleSave}
-            onExport={handleExportConfig}
+            onExport={() => setShowSaveDialog(true)}
             onClose={() => setIsOpen(false)}
           />
 
@@ -98,7 +132,9 @@ export function Dashboard({ isOpen, setIsOpen }: DashboardProps) {
               presets={presets}
               currentPresetId={store.currentPresetId}
               onLoadPreset={handleLoadPreset}
-              onEditPreset={() => {}}
+              onEditPreset={handleEditPreset}
+              onExportPreset={exportPreset}
+              onDeletePreset={handleDeletePreset}
             />
 
             {store.isModified && (
@@ -170,13 +206,13 @@ export function Dashboard({ isOpen, setIsOpen }: DashboardProps) {
       </div>
 
       <Modal
-        isOpen={showExportDialog}
-        onClose={() => setShowExportDialog(false)}
-        title="Export Configuration"
+        isOpen={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        title="Save User Preset"
         actions={
           <>
             <button
-              onClick={() => setShowExportDialog(false)}
+              onClick={() => setShowSaveDialog(false)}
               className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
             >
               Cancel
@@ -185,18 +221,59 @@ export function Dashboard({ isOpen, setIsOpen }: DashboardProps) {
               onClick={handleSavePreset}
               className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
             >
-              Export
+              Save
             </button>
           </>
         }
       >
         <p className="text-gray-600 mb-4">
-          Enter a name for your configuration preset.
+          Enter a name for your preset configuration.
         </p>
         <input
           type="text"
-          value={newPresetName}
-          onChange={(e) => setNewPresetName(e.target.value)}
+          value={presetName}
+          onChange={(e) => setPresetName(e.target.value)}
+          placeholder="Enter preset name"
+          className="w-full px-4 py-2 border rounded-lg"
+        />
+      </Modal>
+
+      <Modal
+        isOpen={showEditDialog}
+        onClose={() => {
+          setShowEditDialog(false);
+          setEditingPreset(null);
+          setPresetName('');
+        }}
+        title="Edit User Preset"
+        actions={
+          <>
+            <button
+              onClick={() => {
+                setShowEditDialog(false);
+                setEditingPreset(null);
+                setPresetName('');
+              }}
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleUpdatePreset}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            >
+              Update
+            </button>
+          </>
+        }
+      >
+        <p className="text-gray-600 mb-4">
+          Update the name of your preset configuration.
+        </p>
+        <input
+          type="text"
+          value={presetName}
+          onChange={(e) => setPresetName(e.target.value)}
           placeholder="Enter preset name"
           className="w-full px-4 py-2 border rounded-lg"
         />

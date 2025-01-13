@@ -8,7 +8,7 @@ interface HeaderProps {
   onClose: () => void;
 }
 
-export function Header({ isModified, onSave, onExport, onClose }: HeaderProps) {
+export function Header({ onSave, onExport, onClose }: HeaderProps) {
   return (
     <div className="p-4 border-b flex justify-between items-center">
       <h2 className="text-xl font-semibold">Dashboard Settings</h2>
@@ -22,15 +22,10 @@ export function Header({ isModified, onSave, onExport, onClose }: HeaderProps) {
         </button>
         <button 
           onClick={onExport}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-            isModified 
-              ? 'bg-green-500 hover:bg-green-600 text-white' 
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }`}
-          disabled={!isModified}
+          className="px-4 py-2 rounded-lg flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white"
         >
-          <Download className="w-4 h-4" />
-          Export Config
+          <Save className="w-4 h-4" />
+          Create Preset
         </button>
         <button 
           onClick={onClose} 
