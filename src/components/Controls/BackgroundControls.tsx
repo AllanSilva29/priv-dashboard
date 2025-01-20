@@ -14,7 +14,7 @@ export function BackgroundControls({ sizeOptions, rotationOptions, repeatOptions
   const { currentBackground, setBackgroundConfig } = useStore();
 
   return (
-    <div className="fixed top-4 right-16 flex gap-2">
+    <div className="absolute top-4 right-16 flex gap-2">
       <div className="flex items-center gap-2">
         <div className="relative">
           <input
@@ -64,7 +64,7 @@ export function BackgroundControls({ sizeOptions, rotationOptions, repeatOptions
       </div>
 
       {isRotationOpen && (
-        <div className="fixed top-16 right-4 w-32 bg-white rounded-lg shadow-lg py-1 z-50">
+        <div className="absolute top-16 right-4 w-32 bg-white rounded-lg shadow-lg py-1 z-50">
           {rotationOptions.map((option) => (
             <button
               key={option.value}
@@ -83,7 +83,7 @@ export function BackgroundControls({ sizeOptions, rotationOptions, repeatOptions
       )}
       
       {isSizeOpen && (
-        <div className="fixed top-16 right-4 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
+        <div className="absolute top-16 right-4 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
           {sizeOptions.map((option) => (
             <button
               key={option.value}

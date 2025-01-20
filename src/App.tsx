@@ -102,7 +102,7 @@ export default function App() {
 
   return (
     <Background>
-      <div className="relative min-h-screen flex items-center justify-center">
+      <div className="relative min-h-screen flex items-center justify-center home-section">
         <div className="absolute inset-0 bg-black/40" />
 
         <Controls

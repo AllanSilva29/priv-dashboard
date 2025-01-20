@@ -9,7 +9,7 @@ interface ControlsProps {
 
 export function Controls({ isRotationPaused, onRandomize, onToggleRotation }: ControlsProps) {
   return (
-    <div className="fixed top-4 left-4 flex gap-2">
+    <div className="absolute top-4 left-4 flex gap-2">
       <button
         onClick={onRandomize}
         className="p-2 rounded-full bg-black/20 hover:bg-black/40 transition-colors text-white"

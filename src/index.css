@@ -12,6 +12,17 @@
   }
 }
 
+html, body {
+  overflow: hidden;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  height: 100vh;
+  overflow: hidden;
+}
 /* Hide the scrollbar */
 ::-webkit-scrollbar {
   display: none;
