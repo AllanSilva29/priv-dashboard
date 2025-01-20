@@ -116,7 +116,7 @@ export default function App() {
       
         <button
           onClick={() => setIsDashboardOpen(true)}
-          className="fixed top-4 right-4 p-2 rounded-full bg-black/20 hover:bg-black/40 transition-colors text-white"
+          className="absolute top-4 right-4 p-2 rounded-full bg-black/20 hover:bg-black/40 transition-colors text-white"
         >
           <Settings className="w-6 h-6" />
         </button>
